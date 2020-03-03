@@ -1127,7 +1127,71 @@ LABEL_RETURN:
     return;
 }
 
+static jmethodID onCreatedMethod;
+static jmethodID onSizeChangedMethod;
+static jmethodID onDrawFrameMethod;
 
+
+void onCreated(void* object){
+    ALOGE("%s: SetupThreadEnv \n", __func__);
+
+    JNIEnv* env;
+    jobject filter  = object;
+    if (JNI_OK != SDL_JNI_SetupThreadEnv(&env)) {
+        ALOGE("%s: SetupThreadEnv failed\n", __func__);
+        return ;
+    }
+    if(onCreatedMethod){
+        (*env)->CallVoidMethod(env,filter,onCreatedMethod);
+    }
+}
+//
+void onSizeChanged(int width,int height, void* object){
+    ALOGE("%s: SetupThreadEnv  width %d, height %d\n", __func__, width, height);
+
+    JNIEnv* env;
+    jobject  filter = object;
+    if (JNI_OK != SDL_JNI_SetupThreadEnv(&env)) {
+        ALOGE("%s: SetupThreadEnv failed\n", __func__);
+        return ;
+    }
+    if(onSizeChangedMethod){
+        (*env)->CallVoidMethod(env,filter,onSizeChangedMethod,width,height);
+    }
+}
+//
+void onDrawFrame(int textureId, void* object){
+    ALOGE("%s: SetupThreadEnv \n", __func__);
+
+    JNIEnv* env;
+    jobject  filter = object;
+    if (JNI_OK != SDL_JNI_SetupThreadEnv(&env)) {
+        ALOGE("%s: SetupThreadEnv failed\n", __func__);
+        return ;
+    }
+    if(onDrawFrameMethod){
+        (*env)->CallVoidMethod(env,filter,onDrawFrameMethod,textureId);
+    }
+}
+
+static void
+IjkMediaPlayer_native_setGLFilter(JNIEnv *env, jobject thiz, jobject filter)
+{
+
+    IjkMediaPlayer *mp = jni_get_media_player(env, thiz);
+    jobject filterObject;
+    if(filter != NULL){
+        filterObject=(*env)->NewGlobalRef(env,filter);
+        jclass filterClass=(*env)->GetObjectClass(env,filterObject);
+        onCreatedMethod=(*env)->GetMethodID(env,filterClass,"onCreated","()V");
+        onSizeChangedMethod=(*env)->GetMethodID(env,filterClass,"onSizeChanged","(II)V");
+        onDrawFrameMethod=(*env)->GetMethodID(env,filterClass,"onDrawFrame","(I)V");
+        ALOGE("IjkMediaPlayer_native_setGLFilter  mp %p  mFilter %p, onCreate %p, onSize %p, onDraw %p", mp, filterObject, onCreatedMethod, onSizeChangedMethod, onDrawFrameMethod);
+        ijkmp_android_set_filter(mp, 1, onCreated, onSizeChanged, onDrawFrame, filterObject);
+    }else{
+        ijkmp_android_set_filter(mp, 0, NULL, NULL, NULL, NULL);
+    }
+}
 
 
 
@@ -1180,6 +1244,7 @@ static JNINativeMethod g_methods[] = {
 
     { "native_setLogLevel",     "(I)V",                     (void *) IjkMediaPlayer_native_setLogLevel },
     { "_setFrameAtTime",        "(Ljava/lang/String;JJII)V", (void *) IjkMediaPlayer_setFrameAtTime },
+    { "native_setGLFilter",     "(Ltv/danmaku/ijk/media/player/IIjkFilter;)V", (void *) IjkMediaPlayer_native_setGLFilter },
 };
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)

@@ -57,6 +57,15 @@ typedef struct IJK_GLES2_Renderer
     GLboolean (*func_uploadTexture)(IJK_GLES2_Renderer *renderer, SDL_VoutOverlay *overlay);
     GLvoid    (*func_destroy)(IJK_GLES2_Renderer *renderer);
 
+    GLuint frame_buffers[1];
+    GLuint frame_textures[1];
+
+    void* filterObject;
+    int hasFilter;
+    void (* func_onCreated)(void* object);
+    void (* func_onSizeChanged)(int width, int height, void* object);
+    void (* func_onDrawFrame)(int textureId, void*object);
+
     GLsizei buffer_width;
     GLsizei visible_width;
 

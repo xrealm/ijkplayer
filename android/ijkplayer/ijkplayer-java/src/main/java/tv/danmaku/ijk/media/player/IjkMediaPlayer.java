@@ -101,6 +101,7 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     public static final int SDL_FCC_YV12 = 0x32315659; // YV12
     public static final int SDL_FCC_RV16 = 0x36315652; // RGB565
     public static final int SDL_FCC_RV32 = 0x32335652; // RGBX8888
+    public static final String SDL_OPENGL = "fcc-_es2";
     //----------------------------------------
 
     //----------------------------------------
@@ -937,6 +938,10 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
         // do nothing
     }
 
+    public void setGLFilter(IIjkFilter filter) {
+        native_setGLFilter(filter);
+    }
+
     private static native void native_init();
 
     private native void native_setup(Object IjkMediaPlayer_this);
@@ -1284,4 +1289,6 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     public static native void native_profileBegin(String libName);
     public static native void native_profileEnd();
     public static native void native_setLogLevel(int level);
+
+    public native void native_setGLFilter(IIjkFilter filter);
 }
