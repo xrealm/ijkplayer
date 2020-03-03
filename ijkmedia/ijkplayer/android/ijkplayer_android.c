@@ -30,6 +30,7 @@
 #include "../ijkplayer_internal.h"
 #include "../pipeline/ffpipeline_ffplay.h"
 #include "pipeline/ffpipeline_android.h"
+#include <ijksdl/ijksdl_log.h>
 
 IjkMediaPlayer *ijkmp_android_create(int(*msg_loop)(void*))
 {
@@ -124,4 +125,19 @@ void ijkmp_android_set_mediacodec_select_callback(IjkMediaPlayer *mp, bool (*cal
 
     pthread_mutex_unlock(&mp->mutex);
     MPTRACE("ijkmp_android_set_mediacodec_select_callback()=void");
+}
+
+void ijkmp_android_set_filter(IjkMediaPlayer *mp,int hasFilter,void *onCreated,void *onSizeChanged,void *onDrawFrame, void* filterObject) {
+
+    if(!mp || !(mp->ffplayer)|| !(mp->ffplayer->vout)){
+        return ;
+    }
+
+    mp->ffplayer->vout->hasFilter = hasFilter;
+    if(hasFilter == 1) {
+        mp->ffplayer->vout->filterObject = filterObject;
+        mp->ffplayer->vout->func_onCreated=onCreated;
+        mp->ffplayer->vout->func_onSizeChanged=onSizeChanged;
+        mp->ffplayer->vout->func_onDrawFrame=onDrawFrame;
+    }
 }

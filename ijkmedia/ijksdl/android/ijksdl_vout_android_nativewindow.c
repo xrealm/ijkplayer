@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <android/native_window.h>
+#include <ijksdl/ijksdl.h>
 #include "ijksdl/ijksdl_vout.h"
 #include "ijksdl/ijksdl_vout_internal.h"
 #include "ijksdl/ijksdl_container.h"
@@ -107,6 +108,12 @@ static SDL_VoutOverlay *func_create_overlay(int width, int height, int frame_for
 {
     SDL_LockMutex(vout->mutex);
     SDL_VoutOverlay *overlay = func_create_overlay_l(width, height, frame_format, vout);
+
+    overlay->hasFilter=vout->hasFilter;
+    overlay->filterObject = vout->filterObject;
+    overlay->func_onCreated=vout->func_onCreated;
+    overlay->func_onSizeChanged=vout->func_onSizeChanged;
+    overlay->func_onDrawFrame=vout->func_onDrawFrame;
     SDL_UnlockMutex(vout->mutex);
     return overlay;
 }

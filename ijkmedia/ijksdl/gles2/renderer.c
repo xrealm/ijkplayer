@@ -180,6 +180,13 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create(SDL_VoutOverlay *overlay)
     }
 
     renderer->format = overlay->format;
+
+    renderer->filterObject = overlay->filterObject;
+    renderer->hasFilter=overlay->hasFilter;
+    renderer->func_onCreated=overlay->func_onCreated;
+    renderer->func_onSizeChanged=overlay->func_onSizeChanged;
+    renderer->func_onDrawFrame=overlay->func_onDrawFrame;
+
     return renderer;
 }
 
@@ -407,6 +414,12 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
          buffer_width != renderer->buffer_width &&
          visible_width != renderer->visible_width)){
 
+         ALOGE("mao: size changed size changed :%d",renderer->frame_buffers[0]);
+         //size changed
+         if(renderer->hasFilter && renderer->frame_buffers[0]) {
+             renderer->func_onSizeChanged(renderer->frame_width, renderer->frame_height, renderer->filterObject);
+         }
+
         renderer->vertices_changed = 0;
 
         IJK_GLES2_Renderer_Vertices_apply(renderer);
@@ -423,7 +436,67 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
         IJK_GLES2_Renderer_TexCoords_reloadVertex(renderer);
     }
 
+    if(renderer->hasFilter && !renderer->frame_buffers[0] && renderer->frame_width > 0 && renderer->frame_height > 0) {
+        glGenTextures(1,renderer->frame_textures);
+        glBindTexture(GL_TEXTURE_2D,renderer->frame_textures[0]);
+        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,renderer->frame_width,renderer->frame_height,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D,0);
+
+        //创建framebuffer
+        glGenFramebuffers(1,renderer->frame_buffers);
+        glBindFramebuffer(GL_FRAMEBUFFER,renderer->frame_buffers[0]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,renderer->frame_textures[0],0);
+
+        glBindFramebuffer(GL_FRAMEBUFFER,0);
+
+        renderer->func_onCreated(renderer->filterObject);
+        renderer->func_onSizeChanged(renderer->frame_width,renderer->frame_height, renderer->filterObject);
+        ALOGE("mao: create framebuffer and textureid %d, %d", renderer->frame_width, renderer->frame_height);
+    }
+
+
+    if(renderer->hasFilter && renderer->frame_buffers[0]){
+        GLint bindFrame;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bindFrame);
+        IJK_GLES2_checkError_TRACE("glGetIntegerv");
+        ALOGE("mao: default frame binding %d",bindFrame);
+        glBindFramebuffer(GL_FRAMEBUFFER,renderer->frame_buffers[0]);
+        IJK_GLES2_checkError_TRACE("glBindFramebuffer");
+        //glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,renderer->frame_textures[0],0);
+        IJK_GLES2_Renderer_use(renderer);
+        IJK_GLES2_checkError_TRACE("IJK_GLES2_Renderer_use");
+       // glBindFramebuffer(GL_FRAMEBUFFER, renderer->frame_buffers[0]);
+    }
+
+    //renderer->func_use(renderer);
+    //glViewport(0, 0, renderer->frame_width, renderer->frame_height);  IJK_GLES2_checkError_TRACE("glViewport");
+    //glClear(GL_COLOR_BUFFER_BIT);               IJK_GLES2_checkError_TRACE("glClear");
+
+    //IJK_GLES_Matrix modelViewProj;
+    //IJK_GLES2_loadOrtho(&modelViewProj, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+    //glUniformMatrix4fv(renderer->um4_mvp, 1, GL_FALSE, modelViewProj.m);                    IJK_GLES2_checkError_TRACE("glUniformMatrix4fv(um4_mvp)");
+
+    GLsizei padding_pixels     = buffer_width - visible_width + 1;
+    GLfloat padding_normalized = ((GLfloat)padding_pixels) / buffer_width;
+
+    IJK_GLES2_Renderer_TexCoords_reset(renderer);
+    IJK_GLES2_Renderer_TexCoords_cropRight(renderer, padding_normalized);
+    IJK_GLES2_Renderer_TexCoords_reloadVertex(renderer);
+    IJK_GLES2_Renderer_Vertices_reloadVertex(renderer);
+
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);      IJK_GLES2_checkError_TRACE("glDrawArrays");
+    IJK_GLES2_checkError_TRACE("glDrawArrays");
+    ALOGE("[GLES2 render] draw frame  width=%d, height=%d!!", renderer->frame_width, renderer->frame_height);
+
+    //调用Filter onDrawFrame
+    if(renderer->hasFilter && renderer->frame_buffers[0]) {
+        glBindFramebuffer(GL_FRAMEBUFFER,0);
+        renderer->func_onDrawFrame(renderer->frame_textures[0], renderer->filterObject);
+    }
 
     return GL_TRUE;
 }

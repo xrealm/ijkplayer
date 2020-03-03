@@ -49,6 +49,12 @@ struct SDL_VoutOverlay {
     SDL_Class               *opaque_class;
     SDL_VoutOverlay_Opaque  *opaque;
 
+    void* filterObject;
+    int hasFilter;
+    void (* func_onCreated)(void* object);
+    void (* func_onSizeChanged)(int width,int height, void* object);
+    void (* func_onDrawFrame)(int textureId, void* object);
+
     void    (*free_l)(SDL_VoutOverlay *overlay);
     int     (*lock)(SDL_VoutOverlay *overlay);
     int     (*unlock)(SDL_VoutOverlay *overlay);
@@ -69,6 +75,12 @@ struct SDL_Vout {
     int (*display_overlay)(SDL_Vout *vout, SDL_VoutOverlay *overlay);
 
     Uint32 overlay_format;
+
+    void* filterObject;
+    int hasFilter;
+    void (* func_onCreated)(void* object);
+    void (* func_onSizeChanged)(int width,int height, void* object);
+    void (* func_onDrawFrame)(int textureId, void* object);
 };
 
 void SDL_VoutFree(SDL_Vout *vout);
